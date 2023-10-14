@@ -15,7 +15,8 @@ import (
 )
 
 type ViewCmdOptions struct {
-	Dependencies []string
+	Dependencies    []string
+	OnlyIngredients bool
 
 	Root *RootCmdOptions
 }
@@ -34,6 +35,7 @@ func NewViewCmd(parent *RootCmd) *ViewCmd {
 	cmd.root = parent
 	cmd.Flags = ff.NewFlagSet("view").SetParent(parent.Flags)
 	cmd.Flags.StringListVar(&cmd.Opts.Dependencies, 'd', "dependency", "dependency (e.g. --dependency \"total_floor 450g\")")
+	cmd.Flags.BoolVar(&cmd.Opts.OnlyIngredients, 'i', "ingredients", "only display ingredients")
 
 	cmd.Command = &ff.Command{
 		Name:      "view",
@@ -113,42 +115,46 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 			Recipe:      r,
 			Ingredients: ingredientRows,
 			Portions:    portionIngredients,
+OnlyPortions: opts.OnlyIngredients,
 		}.Render(ctx, opts.Root.Stdout, opts.Root.OutputFormat())
 	}
 }
 
 type RecipeView struct {
-	Recipe      query.Recipe
-	Ingredients []query.ListRecipeIngredientsRow
-	Portions    []recipe.PortionIngredient
+	Recipe       query.Recipe
+	Ingredients  []query.ListRecipeIngredientsRow
+	Portions     []recipe.PortionIngredient
+	OnlyPortions bool
 }
 
 func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat) error {
-	// Create a new table writer
-	tw := table.NewWriter()
+	if !r.OnlyPortions {
+		// Create a new table writer
+		tw := table.NewWriter()
 
-	// Set table style
-	tw.SetStyle(table.StyleLight)
+		// Set table style
+		tw.SetStyle(table.StyleLight)
 
-	// Set table title
-	tw.SetTitle(fmt.Sprintf("Recipe: %s", r.Recipe.Name))
+		// Set table title
+		tw.SetTitle(fmt.Sprintf("Recipe: %s", r.Recipe.Name))
 
-	// Configure columns
-	tw.AppendHeader(table.Row{"#", "Ingredient", "Unit", "Percentage", "Dependency", "Type"})
-	for _, ingredient := range r.Ingredients {
-		// v, _ := strconv.ParseFloat(fmt.Sprintf("%f", ingredient.Percentage*100), 64)
-		tw.AppendRow(table.Row{
-			ingredient.ID,
-			ingredient.Name,
-			ingredient.UnitType,
-			ingredient.Percentage,
-			ingredient.Dependency,
-			ingredient.IngredientType,
-		})
-	}
+		// Configure columns
+		tw.AppendHeader(table.Row{"#", "Ingredient", "Unit", "Percentage", "Dependency", "Type"})
+		for _, ingredient := range r.Ingredients {
+			// v, _ := strconv.ParseFloat(fmt.Sprintf("%f", ingredient.Percentage*100), 64)
+			tw.AppendRow(table.Row{
+				ingredient.ID,
+				ingredient.Name,
+				ingredient.UnitType,
+				ingredient.Percentage,
+				ingredient.Dependency,
+				ingredient.IngredientType,
+			})
+		}
 
-	if err := renderTable(w, format, tw); err != nil {
-		return err
+		if err := renderTable(w, format, tw); err != nil {
+			return err
+		}
 	}
 
 	if len(r.Portions) > 0 {
