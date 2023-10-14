@@ -61,6 +61,13 @@ func listRecipes(w io.Writer, format OutputFormat, recipes []query.Recipe) error
 	// Create a new table writer
 	tw := table.NewWriter()
 
+		// Set table title
+		tw.SetTitle("Recipes")
+
+
+		// Set table style
+		tw.SetStyle(table.StyleLight)
+
 	// Append a header row
 	tw.AppendHeader(table.Row{"ID", "Name"})
 

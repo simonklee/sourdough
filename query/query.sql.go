@@ -139,7 +139,7 @@ func (q *Queries) GetIngredientByName(ctx context.Context, name string) (Ingredi
 const getIngredients = `-- name: GetIngredients :many
 SELECT i.id, i.name, i.kind
 FROM ingredients i
-ORDER BY i.id DESC
+ORDER BY i.id
 `
 
 func (q *Queries) GetIngredients(ctx context.Context) ([]Ingredient, error) {
@@ -230,7 +230,7 @@ func (q *Queries) ListRecipeIngredients(ctx context.Context, recipeID int64) ([]
 const listRecipes = `-- name: ListRecipes :many
 SELECT r.id, r.name
 FROM recipes r
-ORDER BY r.id DESC
+ORDER BY r.id
 `
 
 func (q *Queries) ListRecipes(ctx context.Context) ([]Recipe, error) {
@@ -262,7 +262,7 @@ FROM recipes r
 JOIN recipe_ingredients ri ON ri.recipe_id = r.id
 JOIN ingredients i ON i.id = ri.ingredient_id
 WHERE i.id = ?
-ORDER BY r.id DESC
+ORDER BY r.id
 `
 
 func (q *Queries) ListRecipesByIngredient(ctx context.Context, id int64) ([]Recipe, error) {

@@ -7,7 +7,7 @@ LIMIT 1;
 -- name: ListRecipes :many
 SELECT r.id, r.name
 FROM recipes r
-ORDER BY r.id DESC;
+ORDER BY r.id;
 
 -- name: CreateRecipe :one
 INSERT INTO recipes (name)
@@ -32,7 +32,7 @@ FROM recipes r
 JOIN recipe_ingredients ri ON ri.recipe_id = r.id
 JOIN ingredients i ON i.id = ri.ingredient_id
 WHERE i.id = ?
-ORDER BY r.id DESC;
+ORDER BY r.id;
 
 -- name: ListRecipeIngredients :many
 SELECT ri.id, ri.recipe_id, i.name, ri.prefer_unit_category, ri.percentage, ri.dependency, i.kind
@@ -63,7 +63,7 @@ WHERE id = ?;
 -- name: GetIngredients :many
 SELECT i.id, i.name, i.kind
 FROM ingredients i
-ORDER BY i.id DESC;
+ORDER BY i.id;
 
 -- name: GetIngredient :one
 SELECT i.id, i.name, i.kind
