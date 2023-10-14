@@ -180,9 +180,6 @@ func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat
 				i + 1,
 				portion.Name,
 				value.Appropriate().Format(),
-				//	Convert().
-				//	Appropriate().
-				//	Format(),
 			})
 		}
 

@@ -6,6 +6,7 @@ import (
 	"strconv"
 )
 
+// Unit is a unit of measurement.
 type Unit string
 
 const (
@@ -20,6 +21,7 @@ const (
 	UnitHandfuls    Unit = "handful"
 )
 
+// ParseUnit parses a unit string into a Unity type.
 func ParseUnit(value string) (Unit, error) {
 	switch value {
 	case "g", "grams":
@@ -45,6 +47,8 @@ func ParseUnit(value string) (Unit, error) {
 	}
 }
 
+// UnitCategory is a category of units. It's used to determine the most suitable
+// unit for a given ingredient.
 type UnitCategory string
 
 const (
@@ -54,6 +58,7 @@ const (
 	UnitCategoryUnknown UnitCategory = ""
 )
 
+// FromUnitCategory returns the default unit for the given category.
 func FromUnitCategory(cat UnitCategory) (Unit, error) {
 	switch cat {
 	case UnitCategoryWeight:
@@ -63,10 +68,11 @@ func FromUnitCategory(cat UnitCategory) (Unit, error) {
 	case UnitCategoryCount:
 		return UnitTeaspoons, nil
 	default:
-		return "", fmt.Errorf("invalid unit type: %s", cat)
+		return "", fmt.Errorf("invalid unit category: %s", cat)
 	}
 }
 
+// DefaultFromUnitCategory returns the default unit for the given category.
 func DefaultFromUnitCategory(cat UnitCategory) Unit {
 	unit, err := FromUnitCategory(cat)
 	if err != nil {
@@ -79,10 +85,12 @@ func (u Unit) String() string {
 	return string(u)
 }
 
+// Format formats the given value with the unit.
 func (u Unit) Format(value float64) string {
 	return FormatValue(value, u)
 }
 
+// IsWeight returns true if the unit is a weight unit.
 func (u Unit) IsWeight() bool {
 	switch u {
 	case UnitGrams, UnitKilos:
@@ -92,6 +100,7 @@ func (u Unit) IsWeight() bool {
 	}
 }
 
+// IsVolume returns true if the unit is a volume unit.
 func (u Unit) IsVolume() bool {
 	switch u {
 	case UnitLitres, UnitMillilitres:
@@ -101,6 +110,7 @@ func (u Unit) IsVolume() bool {
 	}
 }
 
+// IsCount returns true if the unit is a count unit.
 func (u Unit) IsCount() bool {
 	switch u {
 	case UnitTeaspoons, UnitTablespoons, UnitCups, UnitPinches, UnitHandfuls:
@@ -110,10 +120,14 @@ func (u Unit) IsCount() bool {
 	}
 }
 
+// IsUnknown returns true if the unit is unknown.
 func (u Unit) IsUnknown() bool {
 	return !u.IsWeight() && !u.IsVolume() && !u.IsCount()
 }
 
+// IsCompatible returns true if the given unit is compatible with the current
+// unit. Two units are compatible if they are both weight units, both volume
+// units, or both count units.
 func (u Unit) IsCompatible(other Unit) bool {
 	if u.IsUnknown() || other.IsUnknown() {
 		return false
@@ -134,6 +148,11 @@ func (u Unit) ConvertIngredient(value float64, to Unit, ingredient Kind) (float6
 	return ConvertIngredient(value, u, to, ingredient)
 }
 
+type pair struct {
+	From Unit
+	To   Unit
+}
+
 var scaleFactor = map[pair]float64{
 	{UnitMillilitres, UnitLitres}:    0.001,
 	{UnitLitres, UnitMillilitres}:    1000,
@@ -147,11 +166,6 @@ var scaleFactor = map[pair]float64{
 	{UnitTeaspoons, UnitPinches}:     3,
 	{UnitHandfuls, UnitCups}:         0.5,
 	{UnitCups, UnitHandfuls}:         2,
-}
-
-type pair struct {
-	From Unit
-	To   Unit
 }
 
 // Convert converts the given value from one unit to another.
@@ -168,6 +182,7 @@ func Convert(value float64, from Unit, to Unit) (float64, error) {
 	return value * factor, nil
 }
 
+// Kind is an ingredient kind.
 type Kind string
 
 const (
@@ -206,7 +221,7 @@ func (it *Kind) Scan(src any) error {
 	return nil
 }
 
-var ingredientTypeDensity = map[Kind]float64{
+var kindDensity = map[Kind]float64{
 	// Water density is 1 g/ml
 	KindWater: 1,
 
@@ -239,14 +254,16 @@ var ingredientTypeDensity = map[Kind]float64{
 	KindSourdough: 0.95,
 }
 
-func ConvertIngredient(value float64, from Unit, to Unit, ingredient Kind) (float64, error) {
+// ConvertIngredient converts the given value from one unit to another based on
+// the ingredient kind.
+func ConvertIngredient(value float64, from Unit, to Unit, kind Kind) (float64, error) {
 	// Check unit compatibility first
 	if from.IsCompatible(to) {
 		return Convert(value, from, to)
 	}
 
 	// For incompatible units, check if ingredient density is available
-	density, found := ingredientTypeDensity[ingredient]
+	density, found := kindDensity[kind]
 	if !found {
 		return Convert(value, from, to) // fallback to default conversion
 	}
@@ -340,14 +357,17 @@ func (u Unit) Appropriate(value float64) Tuple {
 	return Tuple{Value: value, Unit: u}
 }
 
+// Tuple returns a tuple with the given value and unit.
 func (u Unit) Tuple(value float64) Tuple {
 	return Tuple{Value: value, Unit: u}
 }
 
+// Appropriate converts the given value to the most appropriate unit.
 func (t Tuple) Appropriate() Tuple {
 	return t.Unit.Appropriate(t.Value)
 }
 
+// Convert converts the given value to the given unit.
 func (t Tuple) Convert(to Unit) (Tuple, error) {
 	value, err := t.Unit.Convert(t.Value, to)
 	if err != nil {
@@ -356,14 +376,17 @@ func (t Tuple) Convert(to Unit) (Tuple, error) {
 	return Tuple{Value: value, Unit: to}, nil
 }
 
-func (t Tuple) ConvertIngredient(to Unit, ingredient Kind) (Tuple, error) {
-	value, err := ConvertIngredient(t.Value, t.Unit, to, ingredient)
+// ConvertIngredient converts the given value to the given unit based on the
+// ingredient kind.
+func (t Tuple) ConvertIngredient(to Unit, kind Kind) (Tuple, error) {
+	value, err := ConvertIngredient(t.Value, t.Unit, to, kind)
 	if err != nil {
 		return Tuple{}, err
 	}
 	return Tuple{Value: value, Unit: to}, nil
 }
 
+// Format formats the tuple as a string.
 func (t Tuple) Format() string {
 	return FormatValue(t.Value, t.Unit)
 }
