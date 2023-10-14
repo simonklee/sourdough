@@ -1,10 +1,10 @@
 -- DROP TABLE IF EXISTS recipe_ingredients;
 -- DROP TABLE IF EXISTS ingredients;
 -- DROP TABLE IF EXISTS recipes;
-
 CREATE TABLE IF NOT EXISTS ingredients (
     id        INTEGER NOT NULL PRIMARY KEY,
-    name      TEXT NOT NULL
+    name      TEXT NOT NULL,
+    ingredient_type TEXT NULL
 );
 
 CREATE TABLE IF NOT EXISTS recipes (

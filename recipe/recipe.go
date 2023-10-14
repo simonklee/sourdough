@@ -1,11 +1,9 @@
-package main
+package recipe
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
-
-	"github.com/simonklee/sourdough/query"
 )
 
 type Unit string
@@ -143,10 +141,39 @@ func Convert(value float64, from Unit, to Unit) (float64, error) {
 type IngredientType string
 
 const (
-	IngredientWater IngredientType = "water"
-	IngredientFlour IngredientType = "flour"
-	IngredientSalt  IngredientType = "salt"
+	IngredientWater  IngredientType = "water"
+	IngredientFlour  IngredientType = "flour"
+	IngredientSalt   IngredientType = "salt"
+	IngredientSugar  IngredientType = "sugar"
+	IngredientYeast  IngredientType = "yeast"
+	IngredientOil    IngredientType = "oil"
+	IngredientEgg    IngredientType = "egg"
+	IngredientMilk   IngredientType = "milk"
+	IngredientButter IngredientType = "butter"
+	IngredientOther  IngredientType = ""
 )
+
+// Implement from SQL Driver Valuer interface
+func (it IngredientType) Value() (any, error) {
+	return string(it), nil
+}
+
+// Implement from SQL Scanner interface
+func (it *IngredientType) Scan(src any) error {
+	if src == nil {
+		*it = IngredientOther
+		return nil
+	}
+
+	switch src := src.(type) {
+	case string:
+		*it = IngredientType(src)
+	default:
+		return fmt.Errorf("invalid ingredient type: %v, %T", src, src)
+	}
+
+	return nil
+}
 
 var ingredientTypeDensity = map[IngredientType]float64{
 	// Water density is 1 g/ml
@@ -158,6 +185,24 @@ var ingredientTypeDensity = map[IngredientType]float64{
 
 	// Salt (Sodium chloride) has a density of 2.16 g/ml
 	IngredientSalt: 2.16,
+
+	// Sugar density is 0.85 g/ml
+	IngredientSugar: 0.85,
+
+	// Yeast density is 0.36 g/ml
+	IngredientYeast: 0.36,
+
+	// Oil density is 0.92 g/ml
+	IngredientOil: 0.92,
+
+	// Egg density is 1.03 g/ml
+	IngredientEgg: 1.03,
+
+	// Milk density is 1.03 g/ml
+	IngredientMilk: 1.03,
+
+	// Butter density is 0.96 g/ml
+	IngredientButter: 0.96,
 }
 
 func ConvertIngredient(value float64, from Unit, to Unit, ingredient IngredientType) (float64, error) {
@@ -397,9 +442,16 @@ func findDependency(dependencies []Dependency, label string) (Dependency, error)
 	return Dependency{}, fmt.Errorf("dependency not found: %s", label)
 }
 
+type RecipeIngredient struct {
+	Name       string
+	UnitType   string
+	Percentage float64
+	Dependency string
+}
+
 // Calculate calculates the portion ingredients based on the given templates
 // and dependencies.
-func Calculate(templates []query.ListRecipeIngredientsRow, dependencies []Dependency) ([]PortionIngredient, error) {
+func Calculate(templates []RecipeIngredient, dependencies []Dependency) ([]PortionIngredient, error) {
 	var ingredients []PortionIngredient
 	for _, template := range templates {
 		dep, err := findDependency(dependencies, template.Dependency)

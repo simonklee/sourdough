@@ -35,7 +35,7 @@ WHERE i.id = ?
 ORDER BY r.id DESC;
 
 -- name: ListRecipeIngredients :many
-SELECT ri.id, ri.recipe_id, i.name, ri.unit_type, ri.percentage, ri.dependency
+SELECT ri.id, ri.recipe_id, i.name, ri.unit_type, ri.percentage, ri.dependency, i.ingredient_type
 FROM recipe_ingredients ri
 JOIN ingredients i ON i.id = ri.ingredient_id
 WHERE ri.recipe_id = ?;
@@ -50,7 +50,8 @@ UPDATE recipe_ingredients
 SET 
   unit_type = ?,
   percentage = ?,
-  dependency = ?
+  dependency = ?,
+  ingredient_id = ?
 WHERE id = ?
 RETURNING *;
 
@@ -60,30 +61,31 @@ FROM recipe_ingredients
 WHERE id = ?;
 
 -- name: GetIngredients :many
-SELECT i.id, i.name
+SELECT i.id, i.name, i.ingredient_type
 FROM ingredients i
 ORDER BY i.id DESC;
 
 -- name: GetIngredient :one
-SELECT i.id, i.name
+SELECT i.id, i.name, i.ingredient_type
 FROM ingredients i
 WHERE i.id = ?;
 
 -- name: GetIngredientByName :one
-SELECT i.id, i.name
+SELECT i.id, i.name, i.ingredient_type
 FROM ingredients i
 WHERE i.name LIKE ?
 LIMIT 1;
 
 -- name: CreateIngredient :one
-INSERT INTO ingredients (name)
-VALUES (?)
+INSERT INTO ingredients (name, ingredient_type)
+VALUES (?, ?)
 RETURNING *;
 
 -- name: UpdateIngredient :one
 UPDATE ingredients
 SET 
-  name = ?
+  name = ?,
+  ingredient_type = ?
 WHERE id = ?
 RETURNING *;
 

@@ -11,6 +11,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/peterbourgon/ff/v4"
 	"github.com/simonklee/sourdough/query"
+	"github.com/simonklee/sourdough/recipe"
 )
 
 type ViewCmdOptions struct {
@@ -67,7 +68,7 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 			return fmt.Errorf("invalid recipe ID: %w", err)
 		}
 
-		dependencies, err := ParseDependencies(opts.Dependencies)
+		dependencies, err := recipe.ParseDependencies(opts.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -77,7 +78,7 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 			return err
 		}
 
-		recipe, err := db.GetRecipe(ctx, recipeID)
+		r, err := db.GetRecipe(ctx, recipeID)
 		if err != nil && errors.Is(err, query.ErrNotFound) {
 			fmt.Fprintf(opts.Root.Stdout, "recipe %d not found\n", recipeID)
 			return nil
@@ -85,22 +86,32 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 			return err
 		}
 
-		ingredients, err := db.ListRecipeIngredients(ctx, recipeID)
+		ingredientRows, err := db.ListRecipeIngredients(ctx, recipeID)
 		if err != nil {
 			return err
 		}
 
-		var portionIngredients []PortionIngredient
+		var portionIngredients []recipe.PortionIngredient
 		if len(dependencies) > 0 {
-			portionIngredients, err = Calculate(ingredients, dependencies)
+			ingredients := make([]recipe.RecipeIngredient, 0, len(ingredientRows))
+			for _, row := range ingredientRows {
+				ingredients = append(ingredients, recipe.RecipeIngredient{
+					Name:       row.Name,
+					UnitType:   row.UnitType,
+					Percentage: row.Percentage,
+					Dependency: row.Dependency,
+				})
+			}
+
+			portionIngredients, err = recipe.Calculate(ingredients, dependencies)
 			if err != nil {
 				return err
 			}
 		}
 
 		return RecipeView{
-			Recipe:      recipe,
-			Ingredients: ingredients,
+			Recipe:      r,
+			Ingredients: ingredientRows,
 			Portions:    portionIngredients,
 		}.Render(ctx, opts.Root.Stdout, opts.Root.OutputFormat())
 	}
@@ -109,7 +120,7 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 type RecipeView struct {
 	Recipe      query.Recipe
 	Ingredients []query.ListRecipeIngredientsRow
-	Portions    []PortionIngredient
+	Portions    []recipe.PortionIngredient
 }
 
 func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat) error {
@@ -123,7 +134,7 @@ func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat
 	tw.SetTitle(fmt.Sprintf("Recipe: %s", r.Recipe.Name))
 
 	// Configure columns
-	tw.AppendHeader(table.Row{"#", "Ingredient", "Unit", "Percentage", "Dependency"})
+	tw.AppendHeader(table.Row{"#", "Ingredient", "Unit", "Percentage", "Dependency", "Type"})
 	for _, ingredient := range r.Ingredients {
 		// v, _ := strconv.ParseFloat(fmt.Sprintf("%f", ingredient.Percentage*100), 64)
 		tw.AppendRow(table.Row{
@@ -132,6 +143,7 @@ func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat
 			ingredient.UnitType,
 			ingredient.Percentage,
 			ingredient.Dependency,
+			ingredient.IngredientType,
 		})
 	}
 

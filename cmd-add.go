@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/peterbourgon/ff/v4"
 	"github.com/simonklee/sourdough/query"
+	"github.com/simonklee/sourdough/recipe"
 )
 
 type AddCmdOptions struct {
@@ -63,11 +64,12 @@ func AddCmdExec(opts *AddCmdOptions) CmdExec {
 }
 
 type AddIngredientCmdOptions struct {
-	Name       string  `validate:"required"`
-	UnitType   string  `validate:"required,oneof=weight volume count teaspoon"`
-	RecipeID   int     `validate:"gt=0,required"`
-	Percentage float64 `validate:"gte=0,lte=1,required"`
-	Dependency string
+	Name           string  `validate:"required"`
+	UnitType       string  `validate:"required,oneof=weight volume count teaspoon"`
+	RecipeID       int     `validate:"gt=0,required"`
+	Percentage     float64 `validate:"gte=0,lte=1,required"`
+	Dependency     string
+	IngredientType string
 
 	Parent *AddCmdOptions
 }
@@ -90,6 +92,7 @@ func newAddIngredientCmd(parent *AddCmd) *addIngredientCmd {
 	cmd.Flags.StringEnumVar(&cmd.Opts.UnitType, 'u', "unit", "unit type of the ingredient", "weight", "volume", "count", "teaspoon")
 	cmd.Flags.Float64Var(&cmd.Opts.Percentage, 'p', "percentage", 0.0, "percentage of the ingredient")
 	cmd.Flags.StringVar(&cmd.Opts.Dependency, 'd', "dependency", "", "dependency of the ingredient")
+	cmd.Flags.StringVar(&cmd.Opts.IngredientType, 't', "type", "", "type of the ingredient")
 	cmd.Command = &ff.Command{
 		Name:      "ingredient",
 		Usage:     CmdLabel + " add ingredient <recipe> [flags]",
@@ -116,22 +119,23 @@ func addIngredientCmdExec(opts *AddIngredientCmdOptions) CmdExec {
 		}
 
 		// Check if recipe exists
-		recipe, err := db.GetRecipe(ctx, int64(opts.RecipeID))
+		r, err := db.GetRecipe(ctx, int64(opts.RecipeID))
 		if err != nil {
 			return fmt.Errorf("recipe %d does not exist: %w", opts.RecipeID, err)
 		}
 
 		if opts.Parent.Root.Verbose {
-			fmt.Fprintf(opts.Parent.Root.Stdout, "Adding ingredient %s to recipe %s\n", opts.Name, recipe.Name)
+			fmt.Fprintf(opts.Parent.Root.Stdout, "Adding ingredient %s to recipe %s\n", opts.Name, r.Name)
 			fmt.Fprintf(opts.Parent.Root.Stdout, "Ingredient: %s, Unit: %s, Percentage: %f, Dependency: %s\n", opts.Name, opts.UnitType, opts.Percentage, opts.Dependency)
 		}
 
 		_, err = addRecipeIngredient(ctx, db, AddIngredientParams{
-			Name:       opts.Name,
-			RecipeID:   recipe.ID,
-			UnitType:   opts.UnitType,
-			Percentage: opts.Percentage,
-			Dependency: opts.Dependency,
+			Name:           opts.Name,
+			RecipeID:       r.ID,
+			UnitType:       opts.UnitType,
+			Percentage:     opts.Percentage,
+			Dependency:     opts.Dependency,
+			IngredientType: recipe.IngredientType(opts.IngredientType),
 		})
 
 		return err
@@ -139,11 +143,12 @@ func addIngredientCmdExec(opts *AddIngredientCmdOptions) CmdExec {
 }
 
 type AddIngredientParams struct {
-	Name       string
-	RecipeID   int64
-	UnitType   string
-	Percentage float64
-	Dependency string
+	Name           string
+	RecipeID       int64
+	UnitType       string
+	Percentage     float64
+	Dependency     string
+	IngredientType recipe.IngredientType
 }
 
 // addRecipeIngredient adds a new ingredient to a recipe. If the ingredient
@@ -155,7 +160,10 @@ func addRecipeIngredient(ctx context.Context, db *query.Queries, args AddIngredi
 	}
 
 	if ingredient.ID == 0 {
-		ingredient, err = db.CreateIngredient(ctx, args.Name)
+		ingredient, err = db.CreateIngredient(ctx, query.CreateIngredientParams{
+			Name:           args.Name,
+			IngredientType: args.IngredientType,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ingredient %s: %w", args.Name, err)
 		}

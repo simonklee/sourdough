@@ -9,7 +9,7 @@ import (
 )
 
 type Querier interface {
-	CreateIngredient(ctx context.Context, name string) (Ingredient, error)
+	CreateIngredient(ctx context.Context, arg CreateIngredientParams) (Ingredient, error)
 	CreateRecipe(ctx context.Context, name string) (Recipe, error)
 	CreateRecipeIngredient(ctx context.Context, arg CreateRecipeIngredientParams) (RecipeIngredient, error)
 	DeleteIngredient(ctx context.Context, id int64) error

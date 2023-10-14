@@ -4,11 +4,14 @@
 
 package query
 
-import ()
+import (
+	"github.com/simonklee/sourdough/recipe"
+)
 
 type Ingredient struct {
-	ID   int64
-	Name string
+	ID             int64
+	Name           string
+	IngredientType recipe.IngredientType
 }
 
 type Recipe struct {

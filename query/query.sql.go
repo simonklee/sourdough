@@ -7,18 +7,25 @@ package query
 
 import (
 	"context"
+
+	"github.com/simonklee/sourdough/recipe"
 )
 
 const createIngredient = `-- name: CreateIngredient :one
-INSERT INTO ingredients (name)
-VALUES (?)
-RETURNING id, name
+INSERT INTO ingredients (name, ingredient_type)
+VALUES (?, ?)
+RETURNING id, name, ingredient_type
 `
 
-func (q *Queries) CreateIngredient(ctx context.Context, name string) (Ingredient, error) {
-	row := q.db.QueryRowContext(ctx, createIngredient, name)
+type CreateIngredientParams struct {
+	Name           string
+	IngredientType recipe.IngredientType
+}
+
+func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (Ingredient, error) {
+	row := q.db.QueryRowContext(ctx, createIngredient, arg.Name, arg.IngredientType)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
 	return i, err
 }
 
@@ -103,7 +110,7 @@ func (q *Queries) DeleteRecipeIngredient(ctx context.Context, id int64) error {
 }
 
 const getIngredient = `-- name: GetIngredient :one
-SELECT i.id, i.name
+SELECT i.id, i.name, i.ingredient_type
 FROM ingredients i
 WHERE i.id = ?
 `
@@ -111,12 +118,12 @@ WHERE i.id = ?
 func (q *Queries) GetIngredient(ctx context.Context, id int64) (Ingredient, error) {
 	row := q.db.QueryRowContext(ctx, getIngredient, id)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
 	return i, err
 }
 
 const getIngredientByName = `-- name: GetIngredientByName :one
-SELECT i.id, i.name
+SELECT i.id, i.name, i.ingredient_type
 FROM ingredients i
 WHERE i.name LIKE ?
 LIMIT 1
@@ -125,12 +132,12 @@ LIMIT 1
 func (q *Queries) GetIngredientByName(ctx context.Context, name string) (Ingredient, error) {
 	row := q.db.QueryRowContext(ctx, getIngredientByName, name)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
 	return i, err
 }
 
 const getIngredients = `-- name: GetIngredients :many
-SELECT i.id, i.name
+SELECT i.id, i.name, i.ingredient_type
 FROM ingredients i
 ORDER BY i.id DESC
 `
@@ -144,7 +151,7 @@ func (q *Queries) GetIngredients(ctx context.Context) ([]Ingredient, error) {
 	var items []Ingredient
 	for rows.Next() {
 		var i Ingredient
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.IngredientType); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -173,19 +180,20 @@ func (q *Queries) GetRecipe(ctx context.Context, id int64) (Recipe, error) {
 }
 
 const listRecipeIngredients = `-- name: ListRecipeIngredients :many
-SELECT ri.id, ri.recipe_id, i.name, ri.unit_type, ri.percentage, ri.dependency
+SELECT ri.id, ri.recipe_id, i.name, ri.unit_type, ri.percentage, ri.dependency, i.ingredient_type
 FROM recipe_ingredients ri
 JOIN ingredients i ON i.id = ri.ingredient_id
 WHERE ri.recipe_id = ?
 `
 
 type ListRecipeIngredientsRow struct {
-	ID         int64
-	RecipeID   int64
-	Name       string
-	UnitType   string
-	Percentage float64
-	Dependency string
+	ID             int64
+	RecipeID       int64
+	Name           string
+	UnitType       string
+	Percentage     float64
+	Dependency     string
+	IngredientType recipe.IngredientType
 }
 
 func (q *Queries) ListRecipeIngredients(ctx context.Context, recipeID int64) ([]ListRecipeIngredientsRow, error) {
@@ -204,6 +212,7 @@ func (q *Queries) ListRecipeIngredients(ctx context.Context, recipeID int64) ([]
 			&i.UnitType,
 			&i.Percentage,
 			&i.Dependency,
+			&i.IngredientType,
 		); err != nil {
 			return nil, err
 		}
@@ -282,20 +291,22 @@ func (q *Queries) ListRecipesByIngredient(ctx context.Context, id int64) ([]Reci
 const updateIngredient = `-- name: UpdateIngredient :one
 UPDATE ingredients
 SET 
-  name = ?
+  name = ?,
+  ingredient_type = ?
 WHERE id = ?
-RETURNING id, name
+RETURNING id, name, ingredient_type
 `
 
 type UpdateIngredientParams struct {
-	Name string
-	ID   int64
+	Name           string
+	IngredientType recipe.IngredientType
+	ID             int64
 }
 
 func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (Ingredient, error) {
-	row := q.db.QueryRowContext(ctx, updateIngredient, arg.Name, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateIngredient, arg.Name, arg.IngredientType, arg.ID)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
 	return i, err
 }
 
@@ -324,16 +335,18 @@ UPDATE recipe_ingredients
 SET 
   unit_type = ?,
   percentage = ?,
-  dependency = ?
+  dependency = ?,
+  ingredient_id = ?
 WHERE id = ?
 RETURNING id, recipe_id, ingredient_id, unit_type, percentage, dependency
 `
 
 type UpdateRecipeIngredientParams struct {
-	UnitType   string
-	Percentage float64
-	Dependency string
-	ID         int64
+	UnitType     string
+	Percentage   float64
+	Dependency   string
+	IngredientID int64
+	ID           int64
 }
 
 func (q *Queries) UpdateRecipeIngredient(ctx context.Context, arg UpdateRecipeIngredientParams) (RecipeIngredient, error) {
@@ -341,6 +354,7 @@ func (q *Queries) UpdateRecipeIngredient(ctx context.Context, arg UpdateRecipeIn
 		arg.UnitType,
 		arg.Percentage,
 		arg.Dependency,
+		arg.IngredientID,
 		arg.ID,
 	)
 	var i RecipeIngredient
