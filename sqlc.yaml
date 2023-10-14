@@ -10,5 +10,7 @@ sql:
         emit_pointers_for_null_types: true
         emit_interface: true
         overrides:
-          - column: "ingredients.ingredient_type"
-            go_type: "github.com/simonklee/sourdough/recipe.IngredientType"
+          - column: "ingredients.kind"
+            go_type: "github.com/simonklee/sourdough/recipe.Kind"
+          - column: "recipe_ingredients.prefer_unit_category"
+            go_type: "github.com/simonklee/sourdough/recipe.UnitCategory"

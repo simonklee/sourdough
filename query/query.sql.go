@@ -12,20 +12,20 @@ import (
 )
 
 const createIngredient = `-- name: CreateIngredient :one
-INSERT INTO ingredients (name, ingredient_type)
+INSERT INTO ingredients (name, kind)
 VALUES (?, ?)
-RETURNING id, name, ingredient_type
+RETURNING id, name, kind
 `
 
 type CreateIngredientParams struct {
-	Name           string
-	IngredientType recipe.IngredientType
+	Name string
+	Kind recipe.Kind
 }
 
 func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (Ingredient, error) {
-	row := q.db.QueryRowContext(ctx, createIngredient, arg.Name, arg.IngredientType)
+	row := q.db.QueryRowContext(ctx, createIngredient, arg.Name, arg.Kind)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
+	err := row.Scan(&i.ID, &i.Name, &i.Kind)
 	return i, err
 }
 
@@ -43,24 +43,24 @@ func (q *Queries) CreateRecipe(ctx context.Context, name string) (Recipe, error)
 }
 
 const createRecipeIngredient = `-- name: CreateRecipeIngredient :one
-INSERT INTO recipe_ingredients (recipe_id, ingredient_id, unit_type, percentage, dependency)
+INSERT INTO recipe_ingredients (recipe_id, ingredient_id, prefer_unit_category, percentage, dependency)
 VALUES (?, ?, ?, ?, ?)
-RETURNING id, recipe_id, ingredient_id, unit_type, percentage, dependency
+RETURNING id, recipe_id, ingredient_id, prefer_unit_category, percentage, dependency
 `
 
 type CreateRecipeIngredientParams struct {
-	RecipeID     int64
-	IngredientID int64
-	UnitType     string
-	Percentage   float64
-	Dependency   string
+	RecipeID           int64
+	IngredientID       int64
+	PreferUnitCategory recipe.UnitCategory
+	Percentage         float64
+	Dependency         string
 }
 
 func (q *Queries) CreateRecipeIngredient(ctx context.Context, arg CreateRecipeIngredientParams) (RecipeIngredient, error) {
 	row := q.db.QueryRowContext(ctx, createRecipeIngredient,
 		arg.RecipeID,
 		arg.IngredientID,
-		arg.UnitType,
+		arg.PreferUnitCategory,
 		arg.Percentage,
 		arg.Dependency,
 	)
@@ -69,7 +69,7 @@ func (q *Queries) CreateRecipeIngredient(ctx context.Context, arg CreateRecipeIn
 		&i.ID,
 		&i.RecipeID,
 		&i.IngredientID,
-		&i.UnitType,
+		&i.PreferUnitCategory,
 		&i.Percentage,
 		&i.Dependency,
 	)
@@ -110,7 +110,7 @@ func (q *Queries) DeleteRecipeIngredient(ctx context.Context, id int64) error {
 }
 
 const getIngredient = `-- name: GetIngredient :one
-SELECT i.id, i.name, i.ingredient_type
+SELECT i.id, i.name, i.kind
 FROM ingredients i
 WHERE i.id = ?
 `
@@ -118,12 +118,12 @@ WHERE i.id = ?
 func (q *Queries) GetIngredient(ctx context.Context, id int64) (Ingredient, error) {
 	row := q.db.QueryRowContext(ctx, getIngredient, id)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
+	err := row.Scan(&i.ID, &i.Name, &i.Kind)
 	return i, err
 }
 
 const getIngredientByName = `-- name: GetIngredientByName :one
-SELECT i.id, i.name, i.ingredient_type
+SELECT i.id, i.name, i.kind
 FROM ingredients i
 WHERE i.name LIKE ?
 LIMIT 1
@@ -132,12 +132,12 @@ LIMIT 1
 func (q *Queries) GetIngredientByName(ctx context.Context, name string) (Ingredient, error) {
 	row := q.db.QueryRowContext(ctx, getIngredientByName, name)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
+	err := row.Scan(&i.ID, &i.Name, &i.Kind)
 	return i, err
 }
 
 const getIngredients = `-- name: GetIngredients :many
-SELECT i.id, i.name, i.ingredient_type
+SELECT i.id, i.name, i.kind
 FROM ingredients i
 ORDER BY i.id DESC
 `
@@ -151,7 +151,7 @@ func (q *Queries) GetIngredients(ctx context.Context) ([]Ingredient, error) {
 	var items []Ingredient
 	for rows.Next() {
 		var i Ingredient
-		if err := rows.Scan(&i.ID, &i.Name, &i.IngredientType); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Kind); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -180,20 +180,20 @@ func (q *Queries) GetRecipe(ctx context.Context, id int64) (Recipe, error) {
 }
 
 const listRecipeIngredients = `-- name: ListRecipeIngredients :many
-SELECT ri.id, ri.recipe_id, i.name, ri.unit_type, ri.percentage, ri.dependency, i.ingredient_type
+SELECT ri.id, ri.recipe_id, i.name, ri.prefer_unit_category, ri.percentage, ri.dependency, i.kind
 FROM recipe_ingredients ri
 JOIN ingredients i ON i.id = ri.ingredient_id
 WHERE ri.recipe_id = ?
 `
 
 type ListRecipeIngredientsRow struct {
-	ID             int64
-	RecipeID       int64
-	Name           string
-	UnitType       string
-	Percentage     float64
-	Dependency     string
-	IngredientType recipe.IngredientType
+	ID                 int64
+	RecipeID           int64
+	Name               string
+	PreferUnitCategory recipe.UnitCategory
+	Percentage         float64
+	Dependency         string
+	Kind               recipe.Kind
 }
 
 func (q *Queries) ListRecipeIngredients(ctx context.Context, recipeID int64) ([]ListRecipeIngredientsRow, error) {
@@ -209,10 +209,10 @@ func (q *Queries) ListRecipeIngredients(ctx context.Context, recipeID int64) ([]
 			&i.ID,
 			&i.RecipeID,
 			&i.Name,
-			&i.UnitType,
+			&i.PreferUnitCategory,
 			&i.Percentage,
 			&i.Dependency,
-			&i.IngredientType,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -292,21 +292,21 @@ const updateIngredient = `-- name: UpdateIngredient :one
 UPDATE ingredients
 SET 
   name = ?,
-  ingredient_type = ?
+  kind = ?
 WHERE id = ?
-RETURNING id, name, ingredient_type
+RETURNING id, name, kind
 `
 
 type UpdateIngredientParams struct {
-	Name           string
-	IngredientType recipe.IngredientType
-	ID             int64
+	Name string
+	Kind recipe.Kind
+	ID   int64
 }
 
 func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (Ingredient, error) {
-	row := q.db.QueryRowContext(ctx, updateIngredient, arg.Name, arg.IngredientType, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateIngredient, arg.Name, arg.Kind, arg.ID)
 	var i Ingredient
-	err := row.Scan(&i.ID, &i.Name, &i.IngredientType)
+	err := row.Scan(&i.ID, &i.Name, &i.Kind)
 	return i, err
 }
 
@@ -333,25 +333,25 @@ func (q *Queries) UpdateRecipe(ctx context.Context, arg UpdateRecipeParams) (Rec
 const updateRecipeIngredient = `-- name: UpdateRecipeIngredient :one
 UPDATE recipe_ingredients
 SET 
-  unit_type = ?,
+  prefer_unit_category = ?,
   percentage = ?,
   dependency = ?,
   ingredient_id = ?
 WHERE id = ?
-RETURNING id, recipe_id, ingredient_id, unit_type, percentage, dependency
+RETURNING id, recipe_id, ingredient_id, prefer_unit_category, percentage, dependency
 `
 
 type UpdateRecipeIngredientParams struct {
-	UnitType     string
-	Percentage   float64
-	Dependency   string
-	IngredientID int64
-	ID           int64
+	PreferUnitCategory recipe.UnitCategory
+	Percentage         float64
+	Dependency         string
+	IngredientID       int64
+	ID                 int64
 }
 
 func (q *Queries) UpdateRecipeIngredient(ctx context.Context, arg UpdateRecipeIngredientParams) (RecipeIngredient, error) {
 	row := q.db.QueryRowContext(ctx, updateRecipeIngredient,
-		arg.UnitType,
+		arg.PreferUnitCategory,
 		arg.Percentage,
 		arg.Dependency,
 		arg.IngredientID,
@@ -362,7 +362,7 @@ func (q *Queries) UpdateRecipeIngredient(ctx context.Context, arg UpdateRecipeIn
 		&i.ID,
 		&i.RecipeID,
 		&i.IngredientID,
-		&i.UnitType,
+		&i.PreferUnitCategory,
 		&i.Percentage,
 		&i.Dependency,
 	)

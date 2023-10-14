@@ -9,9 +9,9 @@ import (
 )
 
 type Ingredient struct {
-	ID             int64
-	Name           string
-	IngredientType recipe.IngredientType
+	ID   int64
+	Name string
+	Kind recipe.Kind
 }
 
 type Recipe struct {
@@ -20,10 +20,10 @@ type Recipe struct {
 }
 
 type RecipeIngredient struct {
-	ID           int64
-	RecipeID     int64
-	IngredientID int64
-	UnitType     string
-	Percentage   float64
-	Dependency   string
+	ID                 int64
+	RecipeID           int64
+	IngredientID       int64
+	PreferUnitCategory recipe.UnitCategory
+	Percentage         float64
+	Dependency         string
 }

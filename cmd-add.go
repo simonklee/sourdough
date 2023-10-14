@@ -64,12 +64,12 @@ func AddCmdExec(opts *AddCmdOptions) CmdExec {
 }
 
 type AddIngredientCmdOptions struct {
-	Name           string  `validate:"required"`
-	UnitType       string  `validate:"required,oneof=weight volume count teaspoon"`
-	RecipeID       int     `validate:"gt=0,required"`
-	Percentage     float64 `validate:"gte=0,lte=1,required"`
-	Dependency     string
-	IngredientType string
+	Name               string  `validate:"required"`
+	PreferUnitCategory string  `validate:"required,oneof=weight volume count teaspoon"`
+	RecipeID           int     `validate:"gt=0,required"`
+	Percentage         float64 `validate:"gte=0,lte=1,required"`
+	Dependency         string
+	Kind               string
 
 	Parent *AddCmdOptions
 }
@@ -89,10 +89,10 @@ func newAddIngredientCmd(parent *AddCmd) *addIngredientCmd {
 	cmd.Flags = ff.NewFlagSet("ingredient")
 	cmd.Flags.IntVar(&cmd.Opts.RecipeID, 'r', "recipe", 0, "recipe ID")
 	cmd.Flags.StringVar(&cmd.Opts.Name, 'n', "name", "", "name of the ingredient")
-	cmd.Flags.StringEnumVar(&cmd.Opts.UnitType, 'u', "unit", "unit type of the ingredient", "weight", "volume", "count", "teaspoon")
+	cmd.Flags.StringEnumVar(&cmd.Opts.PreferUnitCategory, 'u', "unit", "preferred output unit category", "weight", "volume", "count", "teaspoon")
 	cmd.Flags.Float64Var(&cmd.Opts.Percentage, 'p', "percentage", 0.0, "percentage of the ingredient")
 	cmd.Flags.StringVar(&cmd.Opts.Dependency, 'd', "dependency", "", "dependency of the ingredient")
-	cmd.Flags.StringVar(&cmd.Opts.IngredientType, 't', "type", "", "type of the ingredient")
+	cmd.Flags.StringVar(&cmd.Opts.Kind, 'k', "kind", "", "kind of the ingredient")
 	cmd.Command = &ff.Command{
 		Name:      "ingredient",
 		Usage:     CmdLabel + " add ingredient <recipe> [flags]",
@@ -126,16 +126,16 @@ func addIngredientCmdExec(opts *AddIngredientCmdOptions) CmdExec {
 
 		if opts.Parent.Root.Verbose {
 			fmt.Fprintf(opts.Parent.Root.Stdout, "Adding ingredient %s to recipe %s\n", opts.Name, r.Name)
-			fmt.Fprintf(opts.Parent.Root.Stdout, "Ingredient: %s, Unit: %s, Percentage: %f, Dependency: %s\n", opts.Name, opts.UnitType, opts.Percentage, opts.Dependency)
+			fmt.Fprintf(opts.Parent.Root.Stdout, "Ingredient: %s, Unit: %s, Percentage: %f, Dependency: %s\n", opts.Name, opts.PreferUnitCategory, opts.Percentage, opts.Dependency)
 		}
 
 		_, err = addRecipeIngredient(ctx, db, AddIngredientParams{
-			Name:           opts.Name,
-			RecipeID:       r.ID,
-			UnitType:       opts.UnitType,
-			Percentage:     opts.Percentage,
-			Dependency:     opts.Dependency,
-			IngredientType: recipe.IngredientType(opts.IngredientType),
+			Name:               opts.Name,
+			RecipeID:           r.ID,
+			PreferUnitCategory: recipe.UnitCategory(opts.PreferUnitCategory),
+			Percentage:         opts.Percentage,
+			Dependency:         opts.Dependency,
+			Kind:               recipe.Kind(opts.Kind), // TODO: parse ingredient type
 		})
 
 		return err
@@ -143,12 +143,12 @@ func addIngredientCmdExec(opts *AddIngredientCmdOptions) CmdExec {
 }
 
 type AddIngredientParams struct {
-	Name           string
-	RecipeID       int64
-	UnitType       string
-	Percentage     float64
-	Dependency     string
-	IngredientType recipe.IngredientType
+	Name               string
+	RecipeID           int64
+	PreferUnitCategory recipe.UnitCategory
+	Percentage         float64
+	Dependency         string
+	Kind               recipe.Kind
 }
 
 // addRecipeIngredient adds a new ingredient to a recipe. If the ingredient
@@ -161,8 +161,8 @@ func addRecipeIngredient(ctx context.Context, db *query.Queries, args AddIngredi
 
 	if ingredient.ID == 0 {
 		ingredient, err = db.CreateIngredient(ctx, query.CreateIngredientParams{
-			Name:           args.Name,
-			IngredientType: args.IngredientType,
+			Name: args.Name,
+			Kind: args.Kind,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ingredient %s: %w", args.Name, err)
@@ -171,11 +171,11 @@ func addRecipeIngredient(ctx context.Context, db *query.Queries, args AddIngredi
 
 	// Create new recipe ingredient
 	params := query.CreateRecipeIngredientParams{
-		RecipeID:     args.RecipeID,
-		IngredientID: ingredient.ID,
-		UnitType:     args.UnitType,
-		Percentage:   args.Percentage,
-		Dependency:   args.Dependency,
+		RecipeID:           args.RecipeID,
+		IngredientID:       ingredient.ID,
+		PreferUnitCategory: args.PreferUnitCategory,
+		Percentage:         args.Percentage,
+		Dependency:         args.Dependency,
 	}
 
 	ri, err := db.CreateRecipeIngredient(ctx, params)

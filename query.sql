@@ -35,20 +35,20 @@ WHERE i.id = ?
 ORDER BY r.id DESC;
 
 -- name: ListRecipeIngredients :many
-SELECT ri.id, ri.recipe_id, i.name, ri.unit_type, ri.percentage, ri.dependency, i.ingredient_type
+SELECT ri.id, ri.recipe_id, i.name, ri.prefer_unit_category, ri.percentage, ri.dependency, i.kind
 FROM recipe_ingredients ri
 JOIN ingredients i ON i.id = ri.ingredient_id
 WHERE ri.recipe_id = ?;
 
 -- name: CreateRecipeIngredient :one
-INSERT INTO recipe_ingredients (recipe_id, ingredient_id, unit_type, percentage, dependency)
+INSERT INTO recipe_ingredients (recipe_id, ingredient_id, prefer_unit_category, percentage, dependency)
 VALUES (?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: UpdateRecipeIngredient :one
 UPDATE recipe_ingredients
 SET 
-  unit_type = ?,
+  prefer_unit_category = ?,
   percentage = ?,
   dependency = ?,
   ingredient_id = ?
@@ -61,23 +61,23 @@ FROM recipe_ingredients
 WHERE id = ?;
 
 -- name: GetIngredients :many
-SELECT i.id, i.name, i.ingredient_type
+SELECT i.id, i.name, i.kind
 FROM ingredients i
 ORDER BY i.id DESC;
 
 -- name: GetIngredient :one
-SELECT i.id, i.name, i.ingredient_type
+SELECT i.id, i.name, i.kind
 FROM ingredients i
 WHERE i.id = ?;
 
 -- name: GetIngredientByName :one
-SELECT i.id, i.name, i.ingredient_type
+SELECT i.id, i.name, i.kind
 FROM ingredients i
 WHERE i.name LIKE ?
 LIMIT 1;
 
 -- name: CreateIngredient :one
-INSERT INTO ingredients (name, ingredient_type)
+INSERT INTO ingredients (name, kind)
 VALUES (?, ?)
 RETURNING *;
 
@@ -85,7 +85,7 @@ RETURNING *;
 UPDATE ingredients
 SET 
   name = ?,
-  ingredient_type = ?
+  kind = ?
 WHERE id = ?
 RETURNING *;
 

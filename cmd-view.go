@@ -98,10 +98,11 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 			ingredients := make([]recipe.RecipeIngredient, 0, len(ingredientRows))
 			for _, row := range ingredientRows {
 				ingredients = append(ingredients, recipe.RecipeIngredient{
-					Name:       row.Name,
-					UnitType:   row.UnitType,
-					Percentage: row.Percentage,
-					Dependency: row.Dependency,
+					Name:               row.Name,
+					Kind:               row.Kind,
+					PreferUnitCategory: row.PreferUnitCategory,
+					Percentage:         row.Percentage,
+					Dependency:         row.Dependency,
 				})
 			}
 
@@ -112,10 +113,10 @@ func ViewCmdExec(opts *ViewCmdOptions) CmdExec {
 		}
 
 		return RecipeView{
-			Recipe:      r,
-			Ingredients: ingredientRows,
-			Portions:    portionIngredients,
-OnlyPortions: opts.OnlyIngredients,
+			Recipe:       r,
+			Ingredients:  ingredientRows,
+			Portions:     portionIngredients,
+			OnlyPortions: opts.OnlyIngredients,
 		}.Render(ctx, opts.Root.Stdout, opts.Root.OutputFormat())
 	}
 }
@@ -139,16 +140,16 @@ func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat
 		tw.SetTitle(fmt.Sprintf("Recipe: %s", r.Recipe.Name))
 
 		// Configure columns
-		tw.AppendHeader(table.Row{"#", "Ingredient", "Unit", "Percentage", "Dependency", "Type"})
+		tw.AppendHeader(table.Row{"#", "Ingredient", "Kind", "Prefer Category", "Percentage", "Dependency"})
 		for _, ingredient := range r.Ingredients {
 			// v, _ := strconv.ParseFloat(fmt.Sprintf("%f", ingredient.Percentage*100), 64)
 			tw.AppendRow(table.Row{
 				ingredient.ID,
 				ingredient.Name,
-				ingredient.UnitType,
+				ingredient.Kind,
+				ingredient.PreferUnitCategory,
 				ingredient.Percentage,
 				ingredient.Dependency,
-				ingredient.IngredientType,
 			})
 		}
 
@@ -167,10 +168,21 @@ func (r RecipeView) Render(ctx context.Context, w io.Writer, format OutputFormat
 
 		tw.AppendHeader(table.Row{"#", "Ingredient", "Amount"})
 		for i, portion := range r.Portions {
+			value := portion.Value
+			if v, err := value.ConvertIngredient(
+				recipe.DefaultFromUnitCategory(portion.PreferUnitCategory),
+				portion.Kind,
+			); err == nil {
+				value = v
+			}
+
 			tw.AppendRow(table.Row{
 				i + 1,
 				portion.Name,
-				portion.Unit.Appropriate(portion.Amount).Format(),
+				value.Appropriate().Format(),
+				//	Convert().
+				//	Appropriate().
+				//	Format(),
 			})
 		}
 

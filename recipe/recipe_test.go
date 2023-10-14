@@ -10,7 +10,7 @@ func TestConvertIngredient(t *testing.T) {
 		value       float64
 		from        Unit
 		to          Unit
-		ingredient  IngredientType
+		ingredient  Kind
 		expected    float64
 		expectError bool
 	}{
@@ -19,7 +19,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1000,
 			from:       UnitGrams,
 			to:         UnitKilos,
-			ingredient: IngredientFlour,
+			ingredient: KindFlour,
 			expected:   1,
 		},
 		{
@@ -27,7 +27,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1,
 			from:       UnitKilos,
 			to:         UnitGrams,
-			ingredient: IngredientFlour,
+			ingredient: KindFlour,
 			expected:   1000,
 		},
 		{
@@ -35,7 +35,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1000,
 			from:       UnitMillilitres,
 			to:         UnitLitres,
-			ingredient: IngredientWater,
+			ingredient: KindWater,
 			expected:   1,
 		},
 		{
@@ -43,7 +43,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1,
 			from:       UnitLitres,
 			to:         UnitMillilitres,
-			ingredient: IngredientWater,
+			ingredient: KindWater,
 			expected:   1000,
 		},
 		{
@@ -51,7 +51,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1000,
 			from:       UnitGrams,
 			to:         UnitMillilitres,
-			ingredient: IngredientWater,
+			ingredient: KindWater,
 			expected:   1000,
 		},
 		{
@@ -59,7 +59,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1000,
 			from:       UnitMillilitres,
 			to:         UnitKilos,
-			ingredient: IngredientWater,
+			ingredient: KindWater,
 			expected:   1,
 		},
 		{
@@ -67,7 +67,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1000,
 			from:       UnitGrams,
 			to:         UnitLitres,
-			ingredient: IngredientFlour,
+			ingredient: KindFlour,
 			expected:   1.5151515151515151,
 		},
 		// Salt (Sodium chloride) has a density of 2.16 g/ml
@@ -76,7 +76,7 @@ func TestConvertIngredient(t *testing.T) {
 			value:      1,
 			from:       UnitKilos,
 			to:         UnitLitres,
-			ingredient: IngredientSalt,
+			ingredient: KindSalt,
 			expected:   0.46296296296296297,
 		},
 	}
@@ -106,8 +106,7 @@ func TestParseDependency(t *testing.T) {
 			dep:  "water 1000g",
 			want: Dependency{
 				Label: "water",
-				Value: 1000,
-				Unit:  UnitGrams,
+				Value: Tuple{Value: 1000, Unit: UnitGrams},
 			},
 		},
 		{
@@ -115,8 +114,7 @@ func TestParseDependency(t *testing.T) {
 			dep:  "water 1kg",
 			want: Dependency{
 				Label: "water",
-				Value: 1,
-				Unit:  UnitKilos,
+				Value: Tuple{Value: 1000, Unit: UnitGrams},
 			},
 		},
 		{
@@ -124,8 +122,7 @@ func TestParseDependency(t *testing.T) {
 			dep:  "water 1l",
 			want: Dependency{
 				Label: "water",
-				Value: 1,
-				Unit:  UnitLitres,
+				Value: Tuple{Value: 1000, Unit: UnitGrams},
 			},
 		},
 		{
@@ -133,8 +130,7 @@ func TestParseDependency(t *testing.T) {
 			dep:  "water 1.5l",
 			want: Dependency{
 				Label: "water",
-				Value: 1.5,
-				Unit:  UnitLitres,
+				Value: Tuple{Value: 1500, Unit: UnitGrams},
 			},
 		},
 		{
@@ -142,8 +138,7 @@ func TestParseDependency(t *testing.T) {
 			dep:  "water 1.5kg",
 			want: Dependency{
 				Label: "water",
-				Value: 1.5,
-				Unit:  UnitKilos,
+				Value: Tuple{Value: 1500, Unit: UnitGrams},
 			},
 		},
 		{
@@ -151,8 +146,7 @@ func TestParseDependency(t *testing.T) {
 			dep:  "water 1.5g",
 			want: Dependency{
 				Label: "water",
-				Value: 1.5,
-				Unit:  UnitGrams,
+				Value: Tuple{Value: 1.5, Unit: UnitGrams},
 			},
 		},
 		{
@@ -184,10 +178,6 @@ func TestParseDependency(t *testing.T) {
 			}
 
 			if got.Value != tt.want.Value {
-				t.Errorf("ParseDependency() got = %v, want %v", got, tt.want)
-			}
-
-			if got.Unit != tt.want.Unit {
 				t.Errorf("ParseDependency() got = %v, want %v", got, tt.want)
 			}
 		})
