@@ -1,5 +1,5 @@
 install: build
-	cp sourdough ~/.local/bin/sourdough
+  cp sourdough ~/.local/bin/sourdough
 
 build: generate test
   go build -o sourdough -tags fts5 .
@@ -11,9 +11,9 @@ generate:
   sqlc generate
 
 fmt:
-	@gofumpt -w $(fd -e go)
-	./scripts/format_sql.py -d sqlite -w -f query.sql
-	./scripts/format_sql.py -d sqlite -w -f schema.sql
+  @gofumpt -w $(fd -e go)
+  ./scripts/format_sql.py -d sqlite -w -f query.sql
+  ./scripts/format_sql.py -d sqlite -w -f schema.sql
 
 bootstrap: install
   rm -rf ~/.config/sourdough
