@@ -12,6 +12,8 @@ generate:
 
 fmt:
 	@gofumpt -w $(fd -e go)
+	./scripts/format_sql.py -d sqlite -w -f query.sql
+	./scripts/format_sql.py -d sqlite -w -f schema.sql
 
 bootstrap: install
   rm -rf ~/.config/sourdough

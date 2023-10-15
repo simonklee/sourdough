@@ -12,8 +12,12 @@ import (
 )
 
 const createIngredient = `-- name: CreateIngredient :one
-INSERT INTO ingredients (name, kind)
-VALUES (?, ?)
+INSERT INTO ingredients (
+  name,
+  kind
+)
+VALUES
+  (?, ?)
 RETURNING id, name, kind
 `
 
@@ -30,8 +34,11 @@ func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientPara
 }
 
 const createRecipe = `-- name: CreateRecipe :one
-INSERT INTO recipes (name)
-VALUES (?)
+INSERT INTO recipes (
+  name
+)
+VALUES
+  (?)
 RETURNING id, name
 `
 
@@ -43,8 +50,15 @@ func (q *Queries) CreateRecipe(ctx context.Context, name string) (Recipe, error)
 }
 
 const createRecipeIngredient = `-- name: CreateRecipeIngredient :one
-INSERT INTO recipe_ingredients (recipe_id, ingredient_id, prefer_unit_category, percentage, dependency)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO recipe_ingredients (
+  recipe_id,
+  ingredient_id,
+  prefer_unit_category,
+  percentage,
+  dependency
+)
+VALUES
+  (?, ?, ?, ?, ?)
 RETURNING id, recipe_id, ingredient_id, prefer_unit_category, percentage, dependency
 `
 
@@ -77,9 +91,9 @@ func (q *Queries) CreateRecipeIngredient(ctx context.Context, arg CreateRecipeIn
 }
 
 const deleteIngredient = `-- name: DeleteIngredient :exec
-DELETE
-FROM ingredients
-WHERE id = ?
+DELETE FROM ingredients
+WHERE
+  id = ?
 `
 
 func (q *Queries) DeleteIngredient(ctx context.Context, id int64) error {
@@ -88,9 +102,9 @@ func (q *Queries) DeleteIngredient(ctx context.Context, id int64) error {
 }
 
 const deleteRecipe = `-- name: DeleteRecipe :exec
-DELETE 
-FROM recipes
-WHERE id = ?
+DELETE FROM recipes
+WHERE
+  id = ?
 `
 
 func (q *Queries) DeleteRecipe(ctx context.Context, id int64) error {
@@ -99,9 +113,9 @@ func (q *Queries) DeleteRecipe(ctx context.Context, id int64) error {
 }
 
 const deleteRecipeIngredient = `-- name: DeleteRecipeIngredient :exec
-DELETE
-FROM recipe_ingredients
-WHERE id = ?
+DELETE FROM recipe_ingredients
+WHERE
+  id = ?
 `
 
 func (q *Queries) DeleteRecipeIngredient(ctx context.Context, id int64) error {
@@ -110,9 +124,13 @@ func (q *Queries) DeleteRecipeIngredient(ctx context.Context, id int64) error {
 }
 
 const getIngredient = `-- name: GetIngredient :one
-SELECT i.id, i.name, i.kind
-FROM ingredients i
-WHERE i.id = ?
+SELECT
+  i.id,
+  i.name,
+  i.kind
+FROM ingredients AS i
+WHERE
+  i.id = ?
 `
 
 func (q *Queries) GetIngredient(ctx context.Context, id int64) (Ingredient, error) {
@@ -123,9 +141,13 @@ func (q *Queries) GetIngredient(ctx context.Context, id int64) (Ingredient, erro
 }
 
 const getIngredientByName = `-- name: GetIngredientByName :one
-SELECT i.id, i.name, i.kind
-FROM ingredients i
-WHERE i.name LIKE ?
+SELECT
+  i.id,
+  i.name,
+  i.kind
+FROM ingredients AS i
+WHERE
+  i.name LIKE ?
 LIMIT 1
 `
 
@@ -137,9 +159,13 @@ func (q *Queries) GetIngredientByName(ctx context.Context, name string) (Ingredi
 }
 
 const getIngredients = `-- name: GetIngredients :many
-SELECT i.id, i.name, i.kind
-FROM ingredients i
-ORDER BY i.id
+SELECT
+  i.id,
+  i.name,
+  i.kind
+FROM ingredients AS i
+ORDER BY
+  i.id
 `
 
 func (q *Queries) GetIngredients(ctx context.Context) ([]Ingredient, error) {
@@ -166,9 +192,12 @@ func (q *Queries) GetIngredients(ctx context.Context) ([]Ingredient, error) {
 }
 
 const getRecipe = `-- name: GetRecipe :one
-SELECT r.id, r.name
-FROM recipes r
-WHERE r.id = ? 
+SELECT
+  r.id,
+  r.name
+FROM recipes AS r
+WHERE
+  r.id = ?
 LIMIT 1
 `
 
@@ -180,10 +209,19 @@ func (q *Queries) GetRecipe(ctx context.Context, id int64) (Recipe, error) {
 }
 
 const listRecipeIngredients = `-- name: ListRecipeIngredients :many
-SELECT ri.id, ri.recipe_id, i.name, ri.prefer_unit_category, ri.percentage, ri.dependency, i.kind
-FROM recipe_ingredients ri
-JOIN ingredients i ON i.id = ri.ingredient_id
-WHERE ri.recipe_id = ?
+SELECT
+  ri.id,
+  ri.recipe_id,
+  i.name,
+  ri.prefer_unit_category,
+  ri.percentage,
+  ri.dependency,
+  i.kind
+FROM recipe_ingredients AS ri
+JOIN ingredients AS i
+  ON i.id = ri.ingredient_id
+WHERE
+  ri.recipe_id = ?
 `
 
 type ListRecipeIngredientsRow struct {
@@ -228,9 +266,12 @@ func (q *Queries) ListRecipeIngredients(ctx context.Context, recipeID int64) ([]
 }
 
 const listRecipes = `-- name: ListRecipes :many
-SELECT r.id, r.name
-FROM recipes r
-ORDER BY r.id
+SELECT
+  r.id,
+  r.name
+FROM recipes AS r
+ORDER BY
+  r.id
 `
 
 func (q *Queries) ListRecipes(ctx context.Context) ([]Recipe, error) {
@@ -257,12 +298,18 @@ func (q *Queries) ListRecipes(ctx context.Context) ([]Recipe, error) {
 }
 
 const listRecipesByIngredient = `-- name: ListRecipesByIngredient :many
-SELECT r.id, r.name
-FROM recipes r
-JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-JOIN ingredients i ON i.id = ri.ingredient_id
-WHERE i.id = ?
-ORDER BY r.id
+SELECT
+  r.id,
+  r.name
+FROM recipes AS r
+JOIN recipe_ingredients AS ri
+  ON ri.recipe_id = r.id
+JOIN ingredients AS i
+  ON i.id = ri.ingredient_id
+WHERE
+  i.id = ?
+ORDER BY
+  r.id
 `
 
 func (q *Queries) ListRecipesByIngredient(ctx context.Context, id int64) ([]Recipe, error) {
@@ -289,11 +336,9 @@ func (q *Queries) ListRecipesByIngredient(ctx context.Context, id int64) ([]Reci
 }
 
 const updateIngredient = `-- name: UpdateIngredient :one
-UPDATE ingredients
-SET 
-  name = ?,
-  kind = ?
-WHERE id = ?
+UPDATE ingredients SET name = ?, kind = ?
+WHERE
+  id = ?
 RETURNING id, name, kind
 `
 
@@ -311,10 +356,9 @@ func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientPara
 }
 
 const updateRecipe = `-- name: UpdateRecipe :one
-UPDATE recipes 
-SET 
-  name = ?
-WHERE id = ?
+UPDATE recipes SET name = ?
+WHERE
+  id = ?
 RETURNING id, name
 `
 
@@ -331,13 +375,9 @@ func (q *Queries) UpdateRecipe(ctx context.Context, arg UpdateRecipeParams) (Rec
 }
 
 const updateRecipeIngredient = `-- name: UpdateRecipeIngredient :one
-UPDATE recipe_ingredients
-SET 
-  prefer_unit_category = ?,
-  percentage = ?,
-  dependency = ?,
-  ingredient_id = ?
-WHERE id = ?
+UPDATE recipe_ingredients SET prefer_unit_category = ?, percentage = ?, dependency = ?, ingredient_id = ?
+WHERE
+  id = ?
 RETURNING id, recipe_id, ingredient_id, prefer_unit_category, percentage, dependency
 `
 
