@@ -14,7 +14,6 @@ type RootCmdOptions struct {
 	Stderr         io.Writer
 	Stdin          io.Reader
 	Verbose        bool
-	FormatJSON     bool
 	FormatTerm     bool
 	FormatHTML     bool
 	FormatMarkdown bool
@@ -28,15 +27,11 @@ type OutputFormat string
 
 const (
 	OutputFormatTerm     OutputFormat = "terminal"
-	OutputFormatJSON     OutputFormat = "json"
 	OutputFormatMarkdown OutputFormat = "markdown"
 	OutputFormatHTML     OutputFormat = "html"
 )
 
 func (cfg *RootCmdOptions) OutputFormat() OutputFormat {
-	if cfg.FormatJSON {
-		return OutputFormatJSON
-	}
 	if cfg.FormatHTML {
 		return OutputFormatHTML
 	}
@@ -71,7 +66,6 @@ func NewRootCmd(stdin io.Reader, stdout, stderr io.Writer) *RootCmd {
 		NoDefault: true,
 	})
 	cmd.Flags.BoolVar(&cmd.Opts.FormatTerm, 0, "term", "output in terminal format")
-	cmd.Flags.BoolVar(&cmd.Opts.FormatJSON, 0, "json", "output in JSON format")
 	cmd.Flags.BoolVar(&cmd.Opts.FormatHTML, 0, "html", "output in HTML format")
 	cmd.Flags.BoolVar(&cmd.Opts.FormatMarkdown, 0, "markdown", "output in Markdown format")
 	cmd.Command = &ff.Command{

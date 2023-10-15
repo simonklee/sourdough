@@ -10,8 +10,6 @@ import (
 func renderTable(w io.Writer, format OutputFormat, tw table.Writer) error {
 	var data string
 	switch format {
-	case OutputFormatJSON:
-		panic("not implemented")
 	case OutputFormatHTML:
 		data = tw.RenderHTML()
 	case OutputFormatMarkdown:
